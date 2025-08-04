@@ -16,16 +16,20 @@ namespace robot.core
 
         public static void InitializeDatabase()
         {
-            if (!File.Exists(dbPath))
+            try
             {
-                SQLiteConnection.CreateFile(dbPath);
-            }
+                Console.WriteLine("📦 Veritabanı oluşturuluyor...");
+                if (!File.Exists(dbPath))
+                {
+                    SQLiteConnection.CreateFile(dbPath);
+                    Console.WriteLine("✅ Veritabanı dosyası oluşturuldu.");
+                }
 
-            using (var connection = new SQLiteConnection(connectionString))
-            {
-                connection.Open();
+                using (var connection = new SQLiteConnection(connectionString))
+                {
+                    connection.Open();
 
-                string createTableQuery = @"
+                    string createTableQuery = @"
                 CREATE TABLE IF NOT EXISTS Comments (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ProductUrl TEXT,
@@ -35,8 +39,14 @@ namespace robot.core
                     CommentText TEXT
                 )";
 
-                var command = new SQLiteCommand(createTableQuery, connection);
-                command.ExecuteNonQuery();
+                    var command = new SQLiteCommand(createTableQuery, connection);
+                    command.ExecuteNonQuery();
+                    Console.WriteLine("✅ Tablo oluşturuldu.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("🔥 HATA (InitializeDatabase): " + ex.Message);
             }
         }
 
