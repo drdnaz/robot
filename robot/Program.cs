@@ -3,53 +3,49 @@ using OpenQA.Selenium.Chrome;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Data.SQLite;
+using robot.core;
 
 class TrendyolCommentScraper
 {
     static void Main()
     {
+        // Veritabanı ilk kurulumu yapılır
+        DatabaseHelper.InitializeDatabase();
+
         ChromeOptions options = new ChromeOptions();
         options.AddArgument("--start-maximized");
+
         using (IWebDriver driver = new ChromeDriver(options))
         {
-                string url = "https://www.trendyol.com/kadin-t-shirt-x-g1-c73";
-                driver.Navigate().GoToUrl(url);
+            string url = "https://www.trendyol.com/kadin-t-shirt-x-g1-c73";
+            driver.Navigate().GoToUrl(url);
 
-                // Sayfanın yüklenmesini bekle (gerekirse süreyi artırabilirsin)
-                Thread.Sleep(4000);
+            Thread.Sleep(4000); // Sayfa yüklenmesini bekle
 
-                // Scroll yaparak daha fazla ürün yüklenmesini sağlamak istersen:
-                // for (int i = 0; i < 5; i++)
-                // {
-                //     ((IJavaScriptExecutor)driver).ExecuteScript("window.scrollTo(0, document.body.scrollHeight);");
-                //     Thread.Sleep(2000);
-                // }
+            // Tüm ürün linklerini al
+            var productLinkElements = driver.FindElements(By.CssSelector(".p-card-chldrn-cntnr.card-border"));
+            var productLinks = new List<string>();
 
-                // Tüm ürün kartı linklerini bul
-                var productLinkElements = driver.FindElements(By.CssSelector(".p-card-chldrn-cntnr.card-border"));
-
-                var productLinks = new List<string>();
-
-                foreach (var element in productLinkElements)
+            foreach (var element in productLinkElements)
+            {
+                string href = element.GetAttribute("href");
+                if (!string.IsNullOrEmpty(href))
                 {
-                    string href = element.GetAttribute("href");
-                    if (!string.IsNullOrEmpty(href))
-                    {
-                        // Mutlak link değilse başa trendyol.com ekle
-                        if (href.StartsWith("/"))
-                            href = "https://www.trendyol.com" + href;
+                    if (href.StartsWith("/"))
+                        href = "https://www.trendyol.com" + href;
 
-                        productLinks.Add(href);
-                        Console.WriteLine(href);
-                    }
+                    productLinks.Add(href);
+                    Console.WriteLine(href);
                 }
+            }
 
-                Console.WriteLine($"Toplam ürün linki: {productLinks.Count}");
+            Console.WriteLine($"Toplam ürün linki: {productLinks.Count}");
+
             foreach (var item in productLinks)
             {
                 Console.WriteLine("ÜRÜN AYRIMI");
-                url = item;
-                driver.Navigate().GoToUrl(url+"/yorumlar");
+                driver.Navigate().GoToUrl(item + "/yorumlar");
 
                 ScrollToLoadAllComments(driver);
 
@@ -61,18 +57,21 @@ class TrendyolCommentScraper
                     string date = SafeGetText(comment, By.CssSelector(".comment-info .comment-info-item:nth-child(2)"));
                     string body = SafeGetText(comment, By.CssSelector(".comment-text p"));
                     string starCount = comment.FindElements(By.CssSelector(".comment-rating .full")).Count.ToString();
+
                     Console.WriteLine("⭐ Yıldız: " + starCount);
                     Console.WriteLine("👤 Kullanıcı: " + username);
                     Console.WriteLine("📅 Tarih: " + date);
                     Console.WriteLine("💬 Yorum: " + body);
                     Console.WriteLine(new string('-', 50));
+
+                    // Yorum veritabanına kaydedilir
+                    int stars = 0;
+                    int.TryParse(starCount, out stars);
+                    DatabaseHelper.SaveComment(item, username, stars, date, body);
                 }
-
-               
             }
+
             driver.Quit();
-
-
         }
     }
 
