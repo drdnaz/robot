@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Data.SQLite;
 using robot.core;
+using System.IO;
+using OpenQA.Selenium.Support.UI;
+using SeleniumExtras.WaitHelpers;
 
 class TrendyolCommentScraper
 {
@@ -18,12 +21,20 @@ class TrendyolCommentScraper
 
         using (IWebDriver driver = new ChromeDriver(options))
         {
+            WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(15));
+
             string url = "https://www.trendyol.com/kadin-t-shirt-x-g1-c73";
             driver.Navigate().GoToUrl(url);
 
-            Thread.Sleep(4000); // Sayfa yüklenmesini bekle
+            // Scroll yaparak ürünlerin yüklenmesini sağla
+            for (int i = 0; i < 5; i++)
+            {
+                ((IJavaScriptExecutor)driver).ExecuteScript("window.scrollTo(0, document.body.scrollHeight);");
+                Thread.Sleep(2000);
+            }
 
-            // Tüm ürün linklerini al
+            // Ürünleri bekle ve al
+            wait.Until(ExpectedConditions.ElementExists(By.CssSelector(".p-card-chldrn-cntnr.card-border")));
             var productLinkElements = driver.FindElements(By.CssSelector(".p-card-chldrn-cntnr.card-border"));
             var productLinks = new List<string>();
 
@@ -64,7 +75,6 @@ class TrendyolCommentScraper
                     Console.WriteLine("💬 Yorum: " + body);
                     Console.WriteLine(new string('-', 50));
 
-                    // Yorum veritabanına kaydedilir
                     int stars = 0;
                     int.TryParse(starCount, out stars);
                     DatabaseHelper.SaveComment(item, username, stars, date, body);
@@ -72,6 +82,34 @@ class TrendyolCommentScraper
             }
 
             driver.Quit();
+        }
+
+        // ✅ CSV dışa aktarımı
+        string outputDir = "data";
+        if (!Directory.Exists(outputDir))
+        {
+            Directory.CreateDirectory(outputDir);
+        }
+
+        string csvPath = Path.Combine(outputDir, "output.csv");
+        DatabaseHelper.ExportToCsv(csvPath);
+        Console.WriteLine($"✅ CSV dosyası oluşturuldu: {csvPath}");
+
+        // ✅ Python (streamlit app.py) başlat
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo();
+            psi.FileName = "cmd.exe";
+            psi.Arguments = "/C streamlit run \"C:\\Users\\tugba\\OneDrive\\Desktop\\askmenot\\app.py\"";
+            psi.UseShellExecute = false;
+            psi.CreateNoWindow = false;
+
+            System.Diagnostics.Process.Start(psi);
+            Console.WriteLine("🚀 Python/Streamlit uygulaması başlatıldı.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("🔥 Python çalıştırılamadı: " + ex.Message);
         }
     }
 

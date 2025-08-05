@@ -30,14 +30,14 @@ namespace robot.core
                     connection.Open();
 
                     string createTableQuery = @"
-                CREATE TABLE IF NOT EXISTS Comments (
-                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    ProductUrl TEXT,
-                    Username TEXT,
-                    StarCount INTEGER,
-                    Date TEXT,
-                    CommentText TEXT
-                )";
+                    CREATE TABLE IF NOT EXISTS Comments (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ProductUrl TEXT,
+                        Username TEXT,
+                        StarCount INTEGER,
+                        Date TEXT,
+                        CommentText TEXT
+                    )";
 
                     var command = new SQLiteCommand(createTableQuery, connection);
                     command.ExecuteNonQuery();
@@ -64,6 +64,37 @@ namespace robot.core
                 command.Parameters.AddWithValue("@date", date);
                 command.Parameters.AddWithValue("@commentText", commentText);
                 command.ExecuteNonQuery();
+            }
+        }
+
+        // ✅ CSV dosyasına verileri dışa aktarır
+        public static void ExportToCsv(string csvPath)
+        {
+            try
+            {
+                using (var connection = new SQLiteConnection(connectionString))
+                {
+                    connection.Open();
+                    var query = "SELECT ProductUrl, CommentText FROM Comments";
+                    var command = new SQLiteCommand(query, connection);
+                    var reader = command.ExecuteReader();
+
+                    using (var writer = new StreamWriter(csvPath, false, Encoding.UTF8))
+                    {
+                        writer.WriteLine("description,comments");
+                        while (reader.Read())
+                        {
+                            var desc = reader["ProductUrl"].ToString().Replace(",", " ");
+                            var comment = reader["CommentText"].ToString().Replace(",", " ");
+                            writer.WriteLine($"\"{desc}\",\"{comment}\"");
+                        }
+                    }
+                    Console.WriteLine($"📁 CSV başarıyla oluşturuldu: {csvPath}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("🔥 HATA (ExportToCsv): " + ex.Message);
             }
         }
     }
