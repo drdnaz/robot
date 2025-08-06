@@ -48,7 +48,7 @@ class TrendyolCommentScraper
 
                     productLinks.Add(href);
                     Console.WriteLine(href);
-                }
+                    }
             }
 
             Console.WriteLine($"Toplam ürün linki: {productLinks.Count}");
@@ -85,22 +85,30 @@ class TrendyolCommentScraper
         }
 
         // ✅ CSV dışa aktarımı
-        string outputDir = "data";
+        string outputDir = Path.Combine(
+     Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+     "AskMeNotData"
+ );
         if (!Directory.Exists(outputDir))
         {
             Directory.CreateDirectory(outputDir);
         }
-
         string csvPath = Path.Combine(outputDir, "output.csv");
         DatabaseHelper.ExportToCsv(csvPath);
         Console.WriteLine($"✅ CSV dosyası oluşturuldu: {csvPath}");
+        System.Threading.Thread.Sleep(1000);
 
         // ✅ Python (streamlit app.py) başlat
         try
         {
             var psi = new System.Diagnostics.ProcessStartInfo();
             psi.FileName = "cmd.exe";
-            psi.Arguments = "/C streamlit run \"C:\\Users\\tugba\\OneDrive\\Desktop\\askmenot\\app.py\"";
+
+            // ✅ Dinamik olarak app.py yolunu al
+            string appPyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.py");
+
+            // ✅ Arguments satırını bu şekilde güncelle
+            psi.Arguments = $"/C streamlit run \"{appPyPath}\"";
             psi.UseShellExecute = false;
             psi.CreateNoWindow = false;
 

@@ -11,7 +11,11 @@ namespace robot.core
 {
     public static class DatabaseHelper
     {
-        private static string dbPath = "TrendyolComments.db";
+        // using System.Environment; ve using System.IO; yukarıda olmalı
+        private static string dataDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "AskMeNotData"
+        );
+        private static string dbPath = Path.Combine(dataDir, "TrendyolComments.db");
         private static string connectionString = $"Data Source={dbPath};Version=3;";
 
         public static void InitializeDatabase()
@@ -19,6 +23,14 @@ namespace robot.core
             try
             {
                 Console.WriteLine("📦 Veritabanı oluşturuluyor...");
+
+                // 1. Belgeler klasörünü oluştur
+                if (!Directory.Exists(dataDir))
+                {
+                    Directory.CreateDirectory(dataDir);
+                }
+
+                // 2. Veritabanı dosyasını oluştur
                 if (!File.Exists(dbPath))
                 {
                     SQLiteConnection.CreateFile(dbPath);
@@ -30,14 +42,14 @@ namespace robot.core
                     connection.Open();
 
                     string createTableQuery = @"
-                    CREATE TABLE IF NOT EXISTS Comments (
-                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        ProductUrl TEXT,
-                        Username TEXT,
-                        StarCount INTEGER,
-                        Date TEXT,
-                        CommentText TEXT
-                    )";
+            CREATE TABLE IF NOT EXISTS Comments (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ProductUrl TEXT,
+                Username TEXT,
+                StarCount INTEGER,
+                Date TEXT,
+                CommentText TEXT
+            )";
 
                     var command = new SQLiteCommand(createTableQuery, connection);
                     command.ExecuteNonQuery();
